@@ -21,8 +21,8 @@ import MentorProfile from "@/components/MentorProfile";
 
 const Search = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedDepartment, setSelectedDepartment] = useState("");
-  const [selectedSkill, setSelectedSkill] = useState("");
+  const [selectedDepartment, setSelectedDepartment] = useState("all");
+  const [selectedSkill, setSelectedSkill] = useState("all");
 
   const mentors = [
     {
@@ -130,8 +130,8 @@ const Search = () => {
                          mentor.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          mentor.skills.some(skill => skill.toLowerCase().includes(searchTerm.toLowerCase()));
     
-    const matchesDepartment = !selectedDepartment || mentor.department === selectedDepartment;
-    const matchesSkill = !selectedSkill || mentor.skills.includes(selectedSkill);
+    const matchesDepartment = selectedDepartment === "all" || mentor.department === selectedDepartment;
+    const matchesSkill = selectedSkill === "all" || mentor.skills.includes(selectedSkill);
     
     return matchesSearch && matchesDepartment && matchesSkill;
   });
@@ -198,7 +198,7 @@ const Search = () => {
                     <SelectValue placeholder="All departments" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All departments</SelectItem>
+                    <SelectItem value="all">All departments</SelectItem>
                     {departments.map((dept) => (
                       <SelectItem key={dept} value={dept}>{dept}</SelectItem>
                     ))}
@@ -213,7 +213,7 @@ const Search = () => {
                     <SelectValue placeholder="All skills" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All skills</SelectItem>
+                    <SelectItem value="all">All skills</SelectItem>
                     {allSkills.map((skill) => (
                       <SelectItem key={skill} value={skill}>{skill}</SelectItem>
                     ))}
@@ -323,8 +323,8 @@ const Search = () => {
               <Button 
                 onClick={() => {
                   setSearchTerm("");
-                  setSelectedDepartment("");
-                  setSelectedSkill("");
+                  setSelectedDepartment("all");
+                  setSelectedSkill("all");
                 }}
                 variant="outline"
               >
