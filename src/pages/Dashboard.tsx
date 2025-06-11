@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,12 +16,15 @@ import {
   Settings,
   LogOut
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 
 const Dashboard = () => {
-  const [userRole] = useState<"mentor" | "mentee">("mentee"); // This would come from auth context
+  const [userRole] = useState<"mentor" | "mentee">("mentee");
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
-  const pendingRequests = [
+  const [pendingRequests, setPendingRequests] = useState([
     {
       id: 1,
       name: "Sarah Chen",
@@ -43,7 +45,43 @@ const Dashboard = () => {
       status: "pending", 
       date: "2024-01-14"
     }
-  ];
+  ]);
+
+  const handleLogout = () => {
+    toast({
+      title: "Logged out successfully",
+      description: "You have been logged out of your account.",
+    });
+    navigate("/");
+  };
+
+  const handleAcceptRequest = (requestId: number) => {
+    setPendingRequests(prevRequests => 
+      prevRequests.map(request => 
+        request.id === requestId 
+          ? { ...request, status: "accepted" }
+          : request
+      )
+    );
+    
+    const request = pendingRequests.find(r => r.id === requestId);
+    toast({
+      title: "Request accepted",
+      description: `You have accepted the mentorship request from ${request?.name}.`,
+    });
+  };
+
+  const handleDeclineRequest = (requestId: number) => {
+    setPendingRequests(prevRequests => 
+      prevRequests.filter(request => request.id !== requestId)
+    );
+    
+    const request = pendingRequests.find(r => r.id === requestId);
+    toast({
+      title: "Request declined",
+      description: `You have declined the mentorship request from ${request?.name}.`,
+    });
+  };
 
   const upcomingSessions = [
     {
@@ -112,7 +150,7 @@ const Dashboard = () => {
                   Profile
                 </Button>
               </Link>
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" onClick={handleLogout}>
                 <LogOut className="h-4 w-4 mr-2" />
                 Logout
               </Button>
@@ -169,7 +207,7 @@ const Dashboard = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold text-gray-900">3</p>
+              <p className="text-2xl font-bold text-gray-900">{pendingRequests.filter(r => r.status === "pending").length}</p>
             </CardContent>
           </Card>
 
@@ -205,7 +243,7 @@ const Dashboard = () => {
             <TabsTrigger value="requests">
               Requests 
               <Badge variant="secondary" className="ml-2">
-                {pendingRequests.length}
+                {pendingRequests.filter(r => r.status === "pending").length}
               </Badge>
             </TabsTrigger>
             <TabsTrigger value="sessions">Sessions</TabsTrigger>
@@ -249,7 +287,7 @@ const Dashboard = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {pendingRequests.slice(0, 3).map((request) => (
+                  {pendingRequests.filter(r => r.status === "pending").slice(0, 3).map((request) => (
                     <div key={request.id} className="p-3 bg-gray-50 rounded-lg">
                       <div className="flex items-start justify-between mb-2">
                         <div>
@@ -260,10 +298,18 @@ const Dashboard = () => {
                       </div>
                       <p className="text-sm text-gray-700 mb-2">{request.message}</p>
                       <div className="flex gap-2">
-                        <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                        <Button 
+                          size="sm" 
+                          className="bg-green-600 hover:bg-green-700"
+                          onClick={() => handleAcceptRequest(request.id)}
+                        >
                           Accept
                         </Button>
-                        <Button size="sm" variant="outline">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleDeclineRequest(request.id)}
+                        >
                           Decline
                         </Button>
                       </div>
@@ -283,7 +329,7 @@ const Dashboard = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {pendingRequests.map((request) => (
+                {pendingRequests.filter(r => r.status === "pending").map((request) => (
                   <div key={request.id} className="border rounded-lg p-6">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center space-x-4">
@@ -314,10 +360,16 @@ const Dashboard = () => {
                     </div>
 
                     <div className="flex gap-3">
-                      <Button className="bg-green-600 hover:bg-green-700">
+                      <Button 
+                        className="bg-green-600 hover:bg-green-700"
+                        onClick={() => handleAcceptRequest(request.id)}
+                      >
                         Accept Request
                       </Button>
-                      <Button variant="outline">
+                      <Button 
+                        variant="outline"
+                        onClick={() => handleDeclineRequest(request.id)}
+                      >
                         Decline
                       </Button>
                       <Button variant="ghost">
@@ -326,6 +378,11 @@ const Dashboard = () => {
                     </div>
                   </div>
                 ))}
+                {pendingRequests.filter(r => r.status === "pending").length === 0 && (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">No pending requests at the moment.</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
