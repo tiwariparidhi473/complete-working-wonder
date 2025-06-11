@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +16,8 @@ import {
   Filter
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import MentorshipRequest from "@/components/MentorshipRequest";
+import MentorProfile from "@/components/MentorProfile";
 
 const Search = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -301,13 +302,12 @@ const Search = () => {
 
                 {/* Actions */}
                 <div className="flex gap-2 pt-2">
-                  <Button className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
-                    <MessageSquare className="h-4 w-4 mr-2" />
-                    Send Request
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    View Profile
-                  </Button>
+                  <MentorshipRequest mentorName={mentor.name} mentorId={mentor.id} />
+                  <MentorProfile mentor={mentor}>
+                    <Button variant="outline" size="sm">
+                      View Profile
+                    </Button>
+                  </MentorProfile>
                 </div>
               </CardContent>
             </Card>

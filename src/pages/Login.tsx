@@ -4,11 +4,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Users } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 
 const Login = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -16,6 +17,8 @@ const Login = () => {
       title: "Login Successful!",
       description: "Welcome back to MentorMatch!",
     });
+    // Redirect to search page after successful login
+    navigate("/search");
   };
 
   return (
