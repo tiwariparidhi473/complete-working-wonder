@@ -8,14 +8,35 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Users, User, GraduationCap, X } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { useEffect } from "react";
 
 const Register = () => {
   const [role, setRole] = useState<"mentor" | "mentee" | "">("");
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    password: "",
+    department: "",
+    bio: "",
+    availability: ""
+  });
   const [skills, setSkills] = useState<string[]>([]);
   const [newSkill, setNewSkill] = useState("");
+  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const { signUp, user } = useAuth();
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      navigate("/search");
+    }
+  }, [user, navigate]);
 
   const departments = [
     "Computer Science",
@@ -51,12 +72,45 @@ const Register = () => {
     setSkills(skills.filter(skill => skill !== skillToRemove));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: "Registration Successful!",
-      description: `Welcome to MentorMatch as a ${role}!`,
-    });
+    setLoading(true);
+
+    try {
+      const userData = {
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        role: role,
+        department: formData.department,
+        bio: formData.bio,
+        skills: skills.join(','),
+        availability: formData.availability
+      };
+
+      const { error } = await signUp(formData.email, formData.password, userData);
+      
+      if (error) {
+        toast({
+          title: "Registration Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Registration Successful!",
+          description: `Welcome to MentorMatch as a ${role}! Please check your email to verify your account.`,
+        });
+        navigate("/login");
+      }
+    } catch (error) {
+      toast({
+        title: "Registration Failed",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -132,33 +186,59 @@ const Register = () => {
                   <div className="grid md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <Label htmlFor="firstName">First Name</Label>
-                      <Input id="firstName" required />
+                      <Input 
+                        id="firstName" 
+                        value={formData.firstName}
+                        onChange={(e) => setFormData({...formData, firstName: e.target.value})}
+                        required 
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="lastName">Last Name</Label>
-                      <Input id="lastName" required />
+                      <Input 
+                        id="lastName" 
+                        value={formData.lastName}
+                        onChange={(e) => setFormData({...formData, lastName: e.target.value})}
+                        required 
+                      />
                     </div>
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="email">Email</Label>
-                    <Input id="email" type="email" required />
+                    <Input 
+                      id="email" 
+                      type="email" 
+                      value={formData.email}
+                      onChange={(e) => setFormData({...formData, email: e.target.value})}
+                      required 
+                    />
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="password">Password</Label>
-                    <Input id="password" type="password" required />
+                    <Input 
+                      id="password" 
+                      type="password" 
+                      value={formData.password}
+                      onChange={(e) => setFormData({...formData, password: e.target.value})}
+                      required 
+                    />
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="department">Department</Label>
-                    <Select required>
+                    <Select 
+                      value={formData.department} 
+                      onValueChange={(value) => setFormData({...formData, department: value})}
+                      required
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select your department" />
                       </SelectTrigger>
                       <SelectContent>
                         {departments.map((dept) => (
-                          <SelectItem key={dept} value={dept.toLowerCase().replace(" ", "-")}>
+                          <SelectItem key={dept} value={dept}>
                             {dept}
                           </SelectItem>
                         ))}
@@ -192,13 +272,17 @@ const Register = () => {
 
                   <div className="space-y-2">
                     <Label htmlFor="availability">Availability</Label>
-                    <Select required>
+                    <Select 
+                      value={formData.availability} 
+                      onValueChange={(value) => setFormData({...formData, availability: value})}
+                      required
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Select your availability" />
                       </SelectTrigger>
                       <SelectContent>
                         {availabilityOptions.map((option) => (
-                          <SelectItem key={option} value={option.toLowerCase().replace(" ", "-")}>
+                          <SelectItem key={option} value={option}>
                             {option}
                           </SelectItem>
                         ))}
@@ -217,6 +301,8 @@ const Register = () => {
                         : "Tell potential mentors about your goals, interests, and what you're looking to learn..."
                       }
                       className="min-h-[100px]"
+                      value={formData.bio}
+                      onChange={(e) => setFormData({...formData, bio: e.target.value})}
                       required
                     />
                   </div>
@@ -233,8 +319,9 @@ const Register = () => {
                     <Button 
                       type="submit" 
                       className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                      disabled={loading}
                     >
-                      Create Account
+                      {loading ? "Creating Account..." : "Create Account"}
                     </Button>
                   </div>
                 </form>
