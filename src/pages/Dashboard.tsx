@@ -18,11 +18,14 @@ import {
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { useUserProfile } from "@/hooks/useUserProfile";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Dashboard = () => {
-  const [userRole] = useState<"mentor" | "mentee">("mentee");
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { profile, loading } = useUserProfile();
+  const { signOut } = useAuth();
 
   const [pendingRequests, setPendingRequests] = useState([
     {
@@ -47,12 +50,20 @@ const Dashboard = () => {
     }
   ]);
 
-  const handleLogout = () => {
-    toast({
-      title: "Logged out successfully",
-      description: "You have been logged out of your account.",
-    });
-    navigate("/");
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      toast({
+        title: "Logged out successfully",
+        description: "You have been logged out of your account.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to log out",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleAcceptRequest = (requestId: number) => {
@@ -125,6 +136,30 @@ const Dashboard = () => {
     }
   ];
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Card className="w-96">
+          <CardHeader>
+            <CardTitle>Profile Not Found</CardTitle>
+            <CardDescription>Please complete your profile setup.</CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
+
+  const userInitials = `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase();
+  const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       {/* Navigation */}
@@ -141,7 +176,7 @@ const Dashboard = () => {
               <Link to="/search">
                 <Button variant="ghost" size="sm">
                   <Search className="h-4 w-4 mr-2" />
-                  {userRole === "mentee" ? "Find Mentors" : "Find Mentees"}
+                  {profile.role === "mentee" ? "Find Mentors" : "Find Mentees"}
                 </Button>
               </Link>
               <Link to="/profile">
@@ -165,19 +200,19 @@ const Dashboard = () => {
           <div className="flex items-center space-x-4 mb-4">
             <Avatar className="h-16 w-16">
               <AvatarFallback className="text-lg font-semibold bg-gradient-to-r from-blue-500 to-purple-500 text-white">
-                JD
+                {userInitials}
               </AvatarFallback>
             </Avatar>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Welcome back, John!</h1>
+              <h1 className="text-3xl font-bold text-gray-900">Welcome back, {profile.first_name}!</h1>
               <div className="flex items-center space-x-2 mt-1">
-                {userRole === "mentor" ? (
+                {profile.role === "mentor" ? (
                   <GraduationCap className="h-4 w-4 text-purple-600" />
                 ) : (
                   <User className="h-4 w-4 text-blue-600" />
                 )}
-                <span className="text-gray-600 capitalize">{userRole}</span>
-                <Badge variant="secondary">Computer Science</Badge>
+                <span className="text-gray-600 capitalize">{profile.role}</span>
+                <Badge variant="secondary">{profile.department}</Badge>
               </div>
             </div>
           </div>
@@ -189,7 +224,7 @@ const Dashboard = () => {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-medium text-gray-600">
-                  {userRole === "mentor" ? "Active Mentees" : "Active Mentors"}
+                  {profile.role === "mentor" ? "Active Mentees" : "Active Mentors"}
                 </CardTitle>
                 <Users className="h-4 w-4 text-blue-600" />
               </div>
@@ -265,7 +300,7 @@ const Dashboard = () => {
                     <div key={session.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <div>
                         <p className="font-medium">
-                          {userRole === "mentor" ? session.mentee : session.mentor}
+                          {profile.role === "mentor" ? session.mentee : session.mentor}
                         </p>
                         <p className="text-sm text-gray-600">{session.topic}</p>
                         <p className="text-sm text-gray-500">{session.date} at {session.time}</p>
@@ -325,7 +360,7 @@ const Dashboard = () => {
               <CardHeader>
                 <CardTitle>Mentorship Requests</CardTitle>
                 <CardDescription>
-                  Manage incoming requests from {userRole === "mentor" ? "mentees" : "mentors"}
+                  Manage incoming requests from {profile.role === "mentor" ? "mentees" : "mentors"}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -400,7 +435,7 @@ const Dashboard = () => {
                       <div>
                         <h3 className="font-semibold text-lg">{session.topic}</h3>
                         <p className="text-gray-600">
-                          with {userRole === "mentor" ? session.mentee : session.mentor}
+                          with {profile.role === "mentor" ? session.mentee : session.mentor}
                         </p>
                       </div>
                       <Badge variant={session.status === "confirmed" ? "default" : "secondary"}>

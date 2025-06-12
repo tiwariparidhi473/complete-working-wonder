@@ -21,11 +21,34 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { useUserProfile } from "@/hooks/useUserProfile";
 
 const Profile = () => {
-  const [skills, setSkills] = useState(["React", "Node.js", "Python", "System Design"]);
+  const { profile, loading, updateProfile } = useUserProfile();
+  const [skills, setSkills] = useState<string[]>([]);
   const [newSkill, setNewSkill] = useState("");
+  const [formData, setFormData] = useState({
+    first_name: "",
+    last_name: "",
+    department: "",
+    bio: "",
+    availability: ""
+  });
   const { toast } = useToast();
+
+  // Initialize form data when profile loads
+  useState(() => {
+    if (profile) {
+      setFormData({
+        first_name: profile.first_name || "",
+        last_name: profile.last_name || "",
+        department: profile.department || "",
+        bio: profile.bio || "",
+        availability: profile.availability || ""
+      });
+      setSkills(profile.skills || []);
+    }
+  }, [profile]);
 
   const departments = [
     "Computer Science",
@@ -61,11 +84,26 @@ const Profile = () => {
     setSkills(skills.filter(skill => skill !== skillToRemove));
   };
 
-  const handleSave = () => {
-    toast({
-      title: "Profile Updated!",
-      description: "Your profile has been successfully updated.",
-    });
+  const handleSave = async () => {
+    const updates = {
+      ...formData,
+      skills
+    };
+
+    const { error } = await updateProfile(updates);
+    
+    if (error) {
+      toast({
+        title: "Error",
+        description: error,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Profile Updated!",
+        description: "Your profile has been successfully updated.",
+      });
+    }
   };
 
   const mockSessions = [
@@ -75,7 +113,7 @@ const Profile = () => {
       topic: "React Best Practices",
       date: "2024-01-15",
       rating: 5,
-      feedback: "Extremely helpful session! John provided excellent insights into React optimization and code structure."
+      feedback: "Extremely helpful session! Great insights into React optimization and code structure."
     },
     {
       id: 2,
@@ -94,6 +132,30 @@ const Profile = () => {
       feedback: "Very insightful discussion about career progression in tech. Highly recommend!"
     }
   ];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Card className="w-96">
+          <CardHeader>
+            <CardTitle>Profile Not Found</CardTitle>
+            <CardDescription>Please complete your profile setup.</CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
+
+  const userInitials = `${profile.first_name?.[0] || ''}${profile.last_name?.[0] || ''}`.toUpperCase();
+  const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
@@ -125,7 +187,7 @@ const Profile = () => {
           <div className="relative">
             <Avatar className="h-24 w-24">
               <AvatarFallback className="text-2xl font-semibold bg-gradient-to-r from-blue-500 to-purple-500 text-white">
-                JD
+                {userInitials}
               </AvatarFallback>
             </Avatar>
             <Button 
@@ -137,10 +199,10 @@ const Profile = () => {
             </Button>
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">John Doe</h1>
-            <p className="text-gray-600">Senior Software Engineer</p>
+            <h1 className="text-3xl font-bold text-gray-900">{fullName}</h1>
+            <p className="text-gray-600 capitalize">{profile.role}</p>
             <div className="flex items-center space-x-4 mt-2">
-              <Badge>Computer Science</Badge>
+              <Badge>{profile.department}</Badge>
               <div className="flex items-center space-x-1">
                 <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
                 <span className="font-medium">4.9</span>
@@ -172,33 +234,39 @@ const Profile = () => {
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="firstName">First Name</Label>
-                    <Input id="firstName" defaultValue="John" />
+                    <Input 
+                      id="firstName" 
+                      value={formData.first_name}
+                      onChange={(e) => setFormData({...formData, first_name: e.target.value})}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="lastName">Last Name</Label>
-                    <Input id="lastName" defaultValue="Doe" />
+                    <Input 
+                      id="lastName" 
+                      value={formData.last_name}
+                      onChange={(e) => setFormData({...formData, last_name: e.target.value})}
+                    />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="title">Professional Title</Label>
-                  <Input id="title" defaultValue="Senior Software Engineer" />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="company">Company</Label>
-                  <Input id="company" defaultValue="Tech Corp" />
+                  <Label htmlFor="email">Email</Label>
+                  <Input id="email" value={profile.email || ''} disabled />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="department">Department</Label>
-                  <Select defaultValue="computer-science">
+                  <Select 
+                    value={formData.department} 
+                    onValueChange={(value) => setFormData({...formData, department: value})}
+                  >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Select your department" />
                     </SelectTrigger>
                     <SelectContent>
                       {departments.map((dept) => (
-                        <SelectItem key={dept} value={dept.toLowerCase().replace(" ", "-")}>
+                        <SelectItem key={dept} value={dept}>
                           {dept}
                         </SelectItem>
                       ))}
@@ -232,13 +300,16 @@ const Profile = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="availability">Availability</Label>
-                  <Select defaultValue="weekday-evenings">
+                  <Select 
+                    value={formData.availability} 
+                    onValueChange={(value) => setFormData({...formData, availability: value})}
+                  >
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Select your availability" />
                     </SelectTrigger>
                     <SelectContent>
                       {availabilityOptions.map((option) => (
-                        <SelectItem key={option} value={option.toLowerCase().replace(" ", "-")}>
+                        <SelectItem key={option} value={option}>
                           {option}
                         </SelectItem>
                       ))}
@@ -252,13 +323,9 @@ const Profile = () => {
                     id="bio" 
                     placeholder="Tell others about your experience, expertise, and mentoring style..."
                     className="min-h-[120px]"
-                    defaultValue="Passionate software engineer with 8+ years of experience in full-stack development. I love helping junior developers grow their technical skills and advance their careers. Specializing in React, Node.js, and system design."
+                    value={formData.bio}
+                    onChange={(e) => setFormData({...formData, bio: e.target.value})}
                   />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="hourlyRate">Hourly Rate (Optional)</Label>
-                  <Input id="hourlyRate" placeholder="e.g., $80/hour" defaultValue="$85/hour" />
                 </div>
 
                 <Button onClick={handleSave} className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
@@ -327,7 +394,7 @@ const Profile = () => {
               <CardContent className="space-y-6">
                 <div className="space-y-2">
                   <Label htmlFor="email">Email Address</Label>
-                  <Input id="email" type="email" defaultValue="john.doe@example.com" />
+                  <Input id="email" type="email" value={profile.email || ''} disabled />
                 </div>
 
                 <div className="space-y-2">

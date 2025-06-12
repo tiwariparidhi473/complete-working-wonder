@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,12 +11,12 @@ import {
   Users, 
   Search as SearchIcon, 
   Star, 
-  MapPin, 
   Clock,
-  MessageSquare,
   Filter
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useMentors } from "@/hooks/useMentors";
+import { useUserProfile } from "@/hooks/useUserProfile";
 import MentorshipRequest from "@/components/MentorshipRequest";
 import MentorProfile from "@/components/MentorProfile";
 
@@ -23,87 +24,8 @@ const Search = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDepartment, setSelectedDepartment] = useState("all");
   const [selectedSkill, setSelectedSkill] = useState("all");
-
-  const mentors = [
-    {
-      id: 1,
-      name: "Dr. Sarah Chen",
-      role: "Senior Software Engineer",
-      department: "Computer Science",
-      company: "Tech Corp",
-      skills: ["React", "Python", "System Design", "Leadership"],
-      rating: 4.9,
-      sessions: 45,
-      availability: "Weekday Evenings",
-      bio: "Passionate about helping junior developers grow their technical and leadership skills. 8+ years of experience in full-stack development.",
-      hourlyRate: "$80/hour"
-    },
-    {
-      id: 2,
-      name: "Michael Rodriguez",
-      role: "Product Manager",
-      department: "Product Management", 
-      company: "StartupXYZ",
-      skills: ["Strategy", "Analytics", "User Research", "Agile"],
-      rating: 4.8,
-      sessions: 32,
-      availability: "Flexible",
-      bio: "Former engineer turned PM. Love helping others transition into product management and build great products.",
-      hourlyRate: "$100/hour"
-    },
-    {
-      id: 3,
-      name: "Emily Watson",
-      role: "Data Science Manager",
-      department: "Data Science",
-      company: "DataFlow Inc",
-      skills: ["Machine Learning", "Python", "SQL", "Visualization"],
-      rating: 4.7,
-      sessions: 28,
-      availability: "Weekend Mornings",
-      bio: "Experienced data scientist passionate about making data science accessible and helping others break into the field.",
-      hourlyRate: "$90/hour"
-    },
-    {
-      id: 4,
-      name: "James Liu",
-      role: "UX Design Lead",
-      department: "Design",
-      company: "Creative Studio",
-      skills: ["UI/UX", "Figma", "User Research", "Prototyping"],
-      rating: 4.9,
-      sessions: 38,
-      availability: "Weekday Afternoons",
-      bio: "10+ years in design. Specialize in helping designers develop their craft and build compelling user experiences.",
-      hourlyRate: "$85/hour"
-    },
-    {
-      id: 5,
-      name: "Rachel Green",
-      role: "Marketing Director",
-      department: "Marketing",
-      company: "Growth Co",
-      skills: ["Digital Marketing", "SEO", "Content Strategy", "Analytics"],
-      rating: 4.6,
-      sessions: 25,
-      availability: "Weekday Mornings",
-      bio: "Marketing professional with expertise in growth marketing and brand building. Love helping marketers advance their careers.",
-      hourlyRate: "$75/hour"
-    },
-    {
-      id: 6,
-      name: "David Kim",
-      role: "Finance Manager",
-      department: "Finance",
-      company: "FinTech Solutions",
-      skills: ["Financial Analysis", "Modeling", "Excel", "Strategy"],
-      rating: 4.8,
-      sessions: 22,
-      availability: "Weekend Afternoons",
-      bio: "CPA with 12+ years experience. Passionate about helping others understand finance and advance in their careers.",
-      hourlyRate: "$95/hour"
-    }
-  ];
+  const { mentors, loading } = useMentors();
+  const { profile } = useUserProfile();
 
   const departments = [
     "Computer Science",
@@ -118,23 +40,31 @@ const Search = () => {
     "Operations"
   ];
 
-  const allSkills = [
-    "React", "Python", "System Design", "Leadership", "Strategy", "Analytics", 
-    "User Research", "Agile", "Machine Learning", "SQL", "Visualization",
-    "UI/UX", "Figma", "Prototyping", "Digital Marketing", "SEO", "Content Strategy",
-    "Financial Analysis", "Modeling", "Excel"
-  ];
+  // Get all unique skills from mentors
+  const allSkills = Array.from(new Set(
+    mentors.flatMap(mentor => mentor.skills || [])
+  )).sort();
 
   const filteredMentors = mentors.filter(mentor => {
-    const matchesSearch = mentor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         mentor.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         mentor.skills.some(skill => skill.toLowerCase().includes(searchTerm.toLowerCase()));
+    const fullName = `${mentor.first_name} ${mentor.last_name}`.toLowerCase();
+    const skills = mentor.skills || [];
+    
+    const matchesSearch = fullName.includes(searchTerm.toLowerCase()) ||
+                         skills.some(skill => skill.toLowerCase().includes(searchTerm.toLowerCase()));
     
     const matchesDepartment = selectedDepartment === "all" || mentor.department === selectedDepartment;
-    const matchesSkill = selectedSkill === "all" || mentor.skills.includes(selectedSkill);
+    const matchesSkill = selectedSkill === "all" || skills.includes(selectedSkill);
     
     return matchesSearch && matchesDepartment && matchesSkill;
   });
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
@@ -236,82 +166,99 @@ const Search = () => {
             <SelectContent>
               <SelectItem value="rating">Highest Rated</SelectItem>
               <SelectItem value="sessions">Most Sessions</SelectItem>
-              <SelectItem value="price-low">Price: Low to High</SelectItem>
-              <SelectItem value="price-high">Price: High to Low</SelectItem>
+              <SelectItem value="alphabetical">Alphabetical</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         {/* Mentor Cards */}
         <div className="grid lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          {filteredMentors.map((mentor) => (
-            <Card key={mentor.id} className="hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-              <CardHeader>
-                <div className="flex items-start space-x-4">
-                  <Avatar className="h-16 w-16">
-                    <AvatarFallback className="text-lg font-semibold bg-gradient-to-r from-blue-500 to-purple-500 text-white">
-                      {mentor.name.split(' ').map(n => n[0]).join('')}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <CardTitle className="text-lg">{mentor.name}</CardTitle>
-                    <CardDescription className="text-sm">{mentor.role}</CardDescription>
-                    <div className="flex items-center space-x-2 mt-1">
-                      <Badge variant="outline" className="text-xs">{mentor.department}</Badge>
-                      <span className="text-xs text-gray-500">at {mentor.company}</span>
+          {filteredMentors.map((mentor) => {
+            const mentorName = `${mentor.first_name} ${mentor.last_name}`;
+            const initials = `${mentor.first_name?.[0] || ''}${mentor.last_name?.[0] || ''}`.toUpperCase();
+            const skills = mentor.skills || [];
+            
+            return (
+              <Card key={mentor.id} className="hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+                <CardHeader>
+                  <div className="flex items-start space-x-4">
+                    <Avatar className="h-16 w-16">
+                      <AvatarFallback className="text-lg font-semibold bg-gradient-to-r from-blue-500 to-purple-500 text-white">
+                        {initials}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <CardTitle className="text-lg">{mentorName}</CardTitle>
+                      <CardDescription className="text-sm">{mentor.role || 'Mentor'}</CardDescription>
+                      <div className="flex items-center space-x-2 mt-1">
+                        <Badge variant="outline" className="text-xs">{mentor.department}</Badge>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </CardHeader>
-              
-              <CardContent className="space-y-4">
-                {/* Rating and Stats */}
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center space-x-1">
-                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                    <span className="font-medium">{mentor.rating}</span>
-                    <span className="text-gray-500">({mentor.sessions} sessions)</span>
+                </CardHeader>
+                
+                <CardContent className="space-y-4">
+                  {/* Rating and Stats */}
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center space-x-1">
+                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                      <span className="font-medium">4.8</span>
+                      <span className="text-gray-500">(12 sessions)</span>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-medium text-green-600">{mentor.hourlyRate}</p>
-                  </div>
-                </div>
 
-                {/* Availability */}
-                <div className="flex items-center space-x-2 text-sm text-gray-600">
-                  <Clock className="h-4 w-4" />
-                  <span>{mentor.availability}</span>
-                </div>
-
-                {/* Bio */}
-                <p className="text-sm text-gray-700 line-clamp-3">{mentor.bio}</p>
-
-                {/* Skills */}
-                <div className="flex flex-wrap gap-1">
-                  {mentor.skills.slice(0, 4).map((skill) => (
-                    <Badge key={skill} variant="secondary" className="text-xs">
-                      {skill}
-                    </Badge>
-                  ))}
-                  {mentor.skills.length > 4 && (
-                    <Badge variant="secondary" className="text-xs">
-                      +{mentor.skills.length - 4} more
-                    </Badge>
+                  {/* Availability */}
+                  {mentor.availability && (
+                    <div className="flex items-center space-x-2 text-sm text-gray-600">
+                      <Clock className="h-4 w-4" />
+                      <span>{mentor.availability}</span>
+                    </div>
                   )}
-                </div>
 
-                {/* Actions */}
-                <div className="flex gap-2 pt-2">
-                  <MentorshipRequest mentorName={mentor.name} mentorId={mentor.id} />
-                  <MentorProfile mentor={mentor}>
-                    <Button variant="outline" size="sm">
-                      View Profile
-                    </Button>
-                  </MentorProfile>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  {/* Bio */}
+                  {mentor.bio && (
+                    <p className="text-sm text-gray-700 line-clamp-3">{mentor.bio}</p>
+                  )}
+
+                  {/* Skills */}
+                  <div className="flex flex-wrap gap-1">
+                    {skills.slice(0, 4).map((skill) => (
+                      <Badge key={skill} variant="secondary" className="text-xs">
+                        {skill}
+                      </Badge>
+                    ))}
+                    {skills.length > 4 && (
+                      <Badge variant="secondary" className="text-xs">
+                        +{skills.length - 4} more
+                      </Badge>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex gap-2 pt-2">
+                    <MentorshipRequest mentorName={mentorName} mentorId={mentor.id} />
+                    <MentorProfile mentor={{
+                      id: parseInt(mentor.id),
+                      name: mentorName,
+                      role: mentor.role || 'Mentor',
+                      department: mentor.department,
+                      company: 'Company',
+                      skills: skills,
+                      rating: 4.8,
+                      sessions: 12,
+                      availability: mentor.availability || 'Flexible',
+                      bio: mentor.bio || '',
+                      hourlyRate: '$80/hour'
+                    }}>
+                      <Button variant="outline" size="sm">
+                        View Profile
+                      </Button>
+                    </MentorProfile>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
 
         {filteredMentors.length === 0 && (
