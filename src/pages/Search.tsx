@@ -238,7 +238,7 @@ const Search = () => {
                   <div className="flex gap-2 pt-2">
                     <MentorshipRequest mentorName={mentorName} mentorId={mentor.id} />
                     <MentorProfile mentor={{
-                      id: parseInt(mentor.id),
+                      id: mentor.id,
                       name: mentorName,
                       role: mentor.role || 'Mentor',
                       department: mentor.department,
